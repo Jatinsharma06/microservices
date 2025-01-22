@@ -1,0 +1,65 @@
+from flask import Flask, jsonify, request
+
+# Initialize Flask application
+app = Flask(__name__)
+
+# In-memory database (for demonstration purposes)
+users_db = []
+
+# Route to add a new user
+@app.route('/users', methods=['POST'])
+def create_user():
+    data = request.json
+    name = data.get('name')
+    email = data.get('email')
+
+    # Basic validation
+    if not name or not email:
+        return jsonify({'error': 'Name and email are required!'}), 400
+
+    # Check for duplicate email
+    for user in users_db:
+        if user['email'] == email:
+            return jsonify({'error': 'User with this email already exists!'}), 409
+
+    # Create a new user
+    user_id = len(users_db) + 1
+    new_user = {
+        'id': user_id,
+        'name': name,
+        'email': email
+    }
+    users_db.append(new_user)
+
+    return jsonify({'message': 'User created successfully!', 'user': new_user}), 201
+
+# Route to get all users
+@app.route('/users', methods=['GET'])
+def list_users():
+    return jsonify({'users': users_db}), 200
+
+# Route to get a specific user by ID
+@app.route('/users/<int:user_id>', methods=['GET'])
+def get_user(user_id):
+    for user in users_db:
+        if user['id'] == user_id:
+            return jsonify({'user': user}), 200
+    return jsonify({'error': 'User not found!'}), 404
+
+# Route to delete a user by ID
+@app.route('/users/<int:user_id>', methods=['DELETE'])
+def delete_user(user_id):
+    global users_db
+    for user in users_db:
+        if user['id'] == user_id:
+            users_db = [u for u in users_db if u['id'] != user_id]
+            return jsonify({'message': 'User deleted successfully!'}), 200
+    return jsonify({'error': 'User not found!'}), 404
+
+# Health check endpoint
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({'status': 'UP'}), 200
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)
